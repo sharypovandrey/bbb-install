@@ -115,7 +115,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:lxgtad" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:b:i:j:q:z:lxgtad" opt "${@}"; do
 
     case $opt in
       h)
@@ -170,27 +170,27 @@ main() {
       d)
         PROVIDED_CERTIFICATE=true
         ;;
-      aws_access)
+      b)
         ACCESS_KEY=$OPTARG
         ;;
-      aws_secret)
+      j)
         SECRET_KEY=$OPTARG
         if [ ! -z "$ACCESS_KEY" ] && [ -z "$SECRET_KEY" ] ; then 
           err "If you provide S3 Access Key, you must specify a valid S3 Secret Key."
           exit 0
         fi
         ;;
-      aws_bucket)
+      i)
         BUCKET=$OPTARG
         if [ ! -z "$ACCESS_KEY" ] && [ -z "$BUCKET" ] ; then 
           err "If you provide S3 Access Key, you must specify a bucket name."
           exit 0
         fi
         ;;
-      aws_region)
+      q)
         REGION=$OPTARG
         ;;
-      aws_host)
+      z)
         S3_HOST=$OPTARG
         ;;
       :)
