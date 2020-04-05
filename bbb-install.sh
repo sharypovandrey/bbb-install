@@ -170,27 +170,27 @@ main() {
       d)
         PROVIDED_CERTIFICATE=true
         ;;
-      s3-access)
+      aws_access)
         ACCESS_KEY=$OPTARG
         ;;
-      s3-secret)
+      aws_secret)
         SECRET_KEY=$OPTARG
         if [ ! -z "$ACCESS_KEY" ] && [ -z "$SECRET_KEY" ] ; then 
           err "If you provide S3 Access Key, you must specify a valid S3 Secret Key."
           exit 0
         fi
         ;;
-      s3-bucket)
+      aws_bucket)
         BUCKET=$OPTARG
         if [ ! -z "$ACCESS_KEY" ] && [ -z "$BUCKET" ] ; then 
           err "If you provide S3 Access Key, you must specify a bucket name."
           exit 0
         fi
         ;;
-      s3-region)
+      aws_region)
         REGION=$OPTARG
         ;;
-      s3-host)
+      aws_host)
         S3_HOST=$OPTARG
         ;;
       :)
