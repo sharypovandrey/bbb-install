@@ -373,6 +373,7 @@ HERE
     sudo systemctl set-environment LANG=C.UTF-8
   fi
 
+  enable_external_client_logging
   mount_scaleway_s3
 
   bbb-conf --check
@@ -1119,6 +1120,27 @@ HERE
 # the the bbb-install.sh command.
 #
 HERE
+}
+
+enable_external_client_logging() {
+  sed -i "s^server: {enabled: true, level: info}^server: {enabled: true, level: debug}^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i "s^{enabled: false, level: info, url: 'https://LOG_HOST/html5Log', method: POST,^external: {enabled: true, level: debug, url: 'https://$HOST/html5Log', method: POST,^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+
+  cat <<'HERE' > /etc/bigbluebutton/nginx/client-log.nginx
+location /html5Log {
+	access_log /var/log/nginx/html5-client.log postdata;
+	echo_read_request_body;
+}
+HERE
+
+  cat <<'HERE' > /etc/nginx/conf.d/client-log.conf
+log_format postdata '$remote_addr [$time_iso8601] $request_body';
+HERE
+
+  apt-get install -y nginx-full
+  touch /var/log/nginx/html5-client.log
+  chown www-data:adm /var/log/nginx/html5-client.log
+  chmod 640 /var/log/nginx/html5-client.log
 }
 
 mount_scaleway_s3() {
