@@ -170,7 +170,29 @@ main() {
       d)
         PROVIDED_CERTIFICATE=true
         ;;
-
+      s3-access)
+        ACCESS_KEY=$OPTARG
+        ;;
+      s3-secret)
+        SECRET_KEY=$OPTARG
+        if [ ! -z "$ACCESS_KEY" ] && [ -z "$SECRET_KEY" ] ; then 
+          err "If you provide S3 Access Key, you must specify a valid S3 Secret Key."
+          exit 0
+        fi
+        ;;
+      s3-bucket)
+        BUCKET=$OPTARG
+        if [ ! -z "$ACCESS_KEY" ] && [ -z "$BUCKET" ] ; then 
+          err "If you provide S3 Access Key, you must specify a bucket name."
+          exit 0
+        fi
+        ;;
+      s3-region)
+        REGION=$OPTARG
+        ;;
+      s3-host)
+        S3_HOST=$OPTARG
+        ;;
       :)
         err "Missing option argument for -$OPTARG"
         exit 1
@@ -350,6 +372,8 @@ HERE
   if ! systemctl show-environment | grep LANG= | grep -q UTF-8; then
     sudo systemctl set-environment LANG=C.UTF-8
   fi
+
+  mount_scaleway_s3
 
   bbb-conf --check
 }
@@ -1095,6 +1119,18 @@ HERE
 # the the bbb-install.sh command.
 #
 HERE
+}
+
+mount_scaleway_s3() {
+  apt install -y s3fs
+  echo $ACCESS_KEY:$SECRET_KEY >  /root/.passwd-s3fs
+  chmod 600  /root/.passwd-s3fs
+  mkdir /mnt/scalelite-recordings
+  if [ -z "$S3_HOST" ]; then 
+    s3fs $BUCKET /mnt/scalelite-recordings -o passwd_file=/root/.passwd-s3fs,dbglevel=debug
+  else
+    s3fs $BUCKET /mnt/scalelite-recordings -o passwd_file=/root/.passwd-s3fs,url=$S3_HOST,dbglevel=debug
+  fi
 }
 
 main "$@" || exit 1
