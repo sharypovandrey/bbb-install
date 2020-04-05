@@ -373,8 +373,11 @@ HERE
     sudo systemctl set-environment LANG=C.UTF-8
   fi
 
+  replace_static
+  change_title_and_welcome
   enable_external_client_logging
   mount_scaleway_s3
+  bbb-conf --restart
 
   bbb-conf --check
 }
@@ -1153,6 +1156,21 @@ mount_scaleway_s3() {
   else
     s3fs $BUCKET /mnt/scalelite-recordings -o passwd_file=/root/.passwd-s3fs,url=$S3_HOST,dbglevel=debug
   fi
+}
+
+replace_static() {
+  wget https://bbb-stream.s3.eu-central-1.amazonaws.com/static/favicon.ico --directory-prefix=/var/www/bigbluebutton-default/
+  wget https://bbb-stream.s3.eu-central-1.amazonaws.com/static/default.pdf --directory-prefix=/var/www/bigbluebutton-default/
+  wget https://bbb-stream.s3.eu-central-1.amazonaws.com/static/conference.tar.gz --directory-prefix=/tmp/
+  tar -xzvf /tmp/conference.tar.gz -C /opt/freeswitch/share/freeswitch/sounds/en/us/callie/
+}
+
+change_title_and_welcome() {
+  sed -i 's^    clientTitle:.*^    clientTitle: "Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i 's^    appName:.*^    appName: "Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i 's^    copyright:.*^    copyright: "©2019 Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i "s^defaultWelcomeMessage=.*^defaultWelcomeMessage=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
+  sed -i "s^defaultWelcomeMessageFooter=.*^defaultWelcomeMessageFooter=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
 }
 
 main "$@" || exit 1
