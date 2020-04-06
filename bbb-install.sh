@@ -1127,7 +1127,7 @@ HERE
 
 enable_external_client_logging() {
   sed -i "s^server: {enabled: true, level: info}^server: {enabled: true, level: debug}^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
-  sed -i "s^{enabled: false, level: info, url: 'https://LOG_HOST/html5Log', method: POST,^external: {enabled: true, level: debug, url: 'https://$HOST/html5Log', method: POST,^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i "s^    external: {enabled:.*^    external: {enabled: true, level: debug, url: 'https://$HOST/html5Log', method: POST,^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
 
   cat <<'HERE' > /etc/bigbluebutton/nginx/client-log.nginx
 location /html5Log {
