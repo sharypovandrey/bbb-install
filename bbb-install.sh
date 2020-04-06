@@ -1159,7 +1159,9 @@ mount_scaleway_s3() {
 }
 
 replace_static() {
+  rm /var/www/bigbluebutton-default/favicon.ico
   wget https://bbb-stream.s3.eu-central-1.amazonaws.com/static/favicon.ico --directory-prefix=/var/www/bigbluebutton-default/
+  rm /var/www/bigbluebutton-default/default.pdf
   wget https://bbb-stream.s3.eu-central-1.amazonaws.com/static/default.pdf --directory-prefix=/var/www/bigbluebutton-default/
   wget https://bbb-stream.s3.eu-central-1.amazonaws.com/static/conference.tar.gz --directory-prefix=/tmp/
   tar -xzvf /tmp/conference.tar.gz -C /opt/freeswitch/share/freeswitch/sounds/en/us/callie/
