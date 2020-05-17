@@ -195,14 +195,14 @@ main() {
         ;;
       u)
         NGINX_AUTH_USER=$OPTARG
-        if [ ! -z "$NGINX_AUTH_USER" ]; then 
+        if [ -z "$NGINX_AUTH_USER" ]; then 
           err "No nginx user"
           exit 0
         fi
         ;;
       y)
         NGINX_AUTH_PASS=$OPTARG
-        if [ ! -z "$NGINX_AUTH_PASS" ]; then 
+        if [ -z "$NGINX_AUTH_PASS" ]; then 
           err "No nginx pass"
           exit 0
         fi
