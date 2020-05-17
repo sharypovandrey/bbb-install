@@ -1144,16 +1144,16 @@ enable_external_client_logging() {
   sed -i "s^server: {enabled: true, level: info}^server: {enabled: true, level: debug}^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
   sed -i "s^    external: {enabled:.*^    external: {enabled: true, level: debug, url: 'https://bbbclientlogs.com/html5Log', method: POST,^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
 
-  #   cat <<'HERE' > /etc/bigbluebutton/nginx/client-log.nginx
-  # location /html5Log {
-  # 	access_log /var/log/nginx/html5-client.log postdata;
-  # 	echo_read_request_body;
-  # }
-  # HERE
+#   cat <<'HERE' > /etc/bigbluebutton/nginx/client-log.nginx
+# location /html5Log {
+# 	access_log /var/log/nginx/html5-client.log postdata;
+# 	echo_read_request_body;
+# }
+# HERE
 
-  #   cat <<'HERE' > /etc/nginx/conf.d/client-log.conf
-  # log_format postdata '$remote_addr [$time_iso8601] $request_body';
-  # HERE
+#   cat <<'HERE' > /etc/nginx/conf.d/client-log.conf
+# log_format postdata '$remote_addr [$time_iso8601] $request_body';
+# HERE
 
   # apt-get install -y nginx-full
   # touch /var/log/nginx/html5-client.log
@@ -1201,10 +1201,10 @@ install_prometheus() {
   BBB_SECRET=`bbb-conf --secret | sed -n 's/    Secret: //p'`
 
   cat <<HERE > ~/bbb-exporter/secrets.env
-  API_BASE_URL=${BBB_URL}api/
-  API_SECRET=$BBB_SECRET
-  HERE
-  
+API_BASE_URL=${BBB_URL}api/
+API_SECRET=$BBB_SECRET
+HERE
+
   cd ~/bbb-exporter
   BBB_EXPORTER_VERSION=latest docker-compose up -d
 
