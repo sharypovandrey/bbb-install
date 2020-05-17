@@ -115,7 +115,7 @@ main() {
 
   need_x64
 
-  while builtin getopts "hs:r:c:v:e:p:m:b:i:j:q:z:lxgtad" opt "${@}"; do
+  while builtin getopts "hs:r:c:v:e:p:m:b:i:j:q:z:u:y:lxgtad" opt "${@}"; do
 
     case $opt in
       h)
@@ -175,14 +175,14 @@ main() {
         ;;
       j)
         SECRET_KEY=$OPTARG
-        if [ ! -z "$ACCESS_KEY" ] && [ -z "$SECRET_KEY" ] ; then 
+        if [ ! -z "$ACCESS_KEY" ] && [ -z "$SECRET_KEY" ]; then 
           err "If you provide S3 Access Key, you must specify a valid S3 Secret Key."
           exit 0
         fi
         ;;
       i)
         BUCKET=$OPTARG
-        if [ ! -z "$ACCESS_KEY" ] && [ -z "$BUCKET" ] ; then 
+        if [ ! -z "$ACCESS_KEY" ] && [ -z "$BUCKET" ]; then 
           err "If you provide S3 Access Key, you must specify a bucket name."
           exit 0
         fi
@@ -192,6 +192,20 @@ main() {
         ;;
       z)
         S3_HOST=$OPTARG
+        ;;
+      u)
+        NGINX_AUTH_USER=$OPTARG
+        if [ ! -z "$NGINX_AUTH_USER" ]; then 
+          err "No nginx user"
+          exit 0
+        fi
+        ;;
+      y)
+        NGINX_AUTH_PASS=$OPTARG
+        if [ ! -z "$NGINX_AUTH_PASS" ]; then 
+          err "No nginx pass"
+          exit 0
+        fi
         ;;
       :)
         err "Missing option argument for -$OPTARG"
@@ -377,6 +391,7 @@ HERE
   change_title_and_welcome
   enable_external_client_logging
   mount_scaleway_s3
+  install_prometheus
   bbb-conf --restart
 
   bbb-conf --check
@@ -1129,21 +1144,21 @@ enable_external_client_logging() {
   sed -i "s^server: {enabled: true, level: info}^server: {enabled: true, level: debug}^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
   sed -i "s^    external: {enabled:.*^    external: {enabled: true, level: debug, url: 'https://bbbclientlogs.com/html5Log', method: POST,^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
 
-  cat <<'HERE' > /etc/bigbluebutton/nginx/client-log.nginx
-location /html5Log {
-	access_log /var/log/nginx/html5-client.log postdata;
-	echo_read_request_body;
-}
-HERE
+  #   cat <<'HERE' > /etc/bigbluebutton/nginx/client-log.nginx
+  # location /html5Log {
+  # 	access_log /var/log/nginx/html5-client.log postdata;
+  # 	echo_read_request_body;
+  # }
+  # HERE
 
-  cat <<'HERE' > /etc/nginx/conf.d/client-log.conf
-log_format postdata '$remote_addr [$time_iso8601] $request_body';
-HERE
+  #   cat <<'HERE' > /etc/nginx/conf.d/client-log.conf
+  # log_format postdata '$remote_addr [$time_iso8601] $request_body';
+  # HERE
 
-  apt-get install -y nginx-full
-  touch /var/log/nginx/html5-client.log
-  chown www-data:adm /var/log/nginx/html5-client.log
-  chmod 640 /var/log/nginx/html5-client.log
+  # apt-get install -y nginx-full
+  # touch /var/log/nginx/html5-client.log
+  # chown www-data:adm /var/log/nginx/html5-client.log
+  # chmod 640 /var/log/nginx/html5-client.log
 }
 
 mount_scaleway_s3() {
@@ -1173,6 +1188,37 @@ change_title_and_welcome() {
   sed -i 's^    copyright:.*^    copyright: "©2019 Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
   sed -i "s^defaultWelcomeMessage=.*^defaultWelcomeMessage=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   sed -i "s^defaultWelcomeMessageFooter=.*^defaultWelcomeMessageFooter=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
+}
+
+install_prometheus() {
+  mkdir ~/bbb-exporter
+  apt install -y wget apache2-utils
+  htpasswd -b -c /etc/nginx/.htpasswd $NGINX_AUTH_USER $NGINX_AUTH_PASS
+  rm ~/bbb-exporter/docker-compose.yml
+  wget https://raw.githubusercontent.com/greenstatic/bigbluebutton-exporter/master/extras/docker-compose.yml --directory-prefix=~/bbb-exporter/
+
+  BBB_URL=`bbb-conf --secret | sed -n 's/    URL: //p'`
+  BBB_SECRET=`bbb-conf --secret | sed -n 's/    Secret: //p'`
+
+  cat <<HERE > ~/bbb-exporter/secrets.env
+  API_BASE_URL=${BBB_URL}api/
+  API_SECRET=$BBB_SECRET
+  HERE
+  
+  cd ~/bbb-exporter
+  BBB_EXPORTER_VERSION=latest docker-compose up -d
+
+  sed -i 's^   # Handle RTMPT (RTMP Tunneling).  Forwards requests^  location /metrics/ {\n    auth_basic "BigBlueButton";\n    auth_basic_user_file /etc/nginx/.htpasswd;\n    proxy_pass         http://127.0.0.1:9688/;\n    proxy_redirect     default;\n    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;\n    client_max_body_size       10m;\n    client_body_buffer_size    128k;\n    proxy_connect_timeout      90;\n    proxy_send_timeout         90;\n    proxy_read_timeout         90;\n    proxy_buffer_size          4k;\n    proxy_buffers              4 32k;\n    proxy_busy_buffers_size    64k;\n    proxy_temp_file_write_size 64k;\n    include    fastcgi_params;\n  }\n  # Handle RTMPT (RTMP Tunneling).  Forwards requests^' /etc/nginx/sites-available/bigbluebutton
+
+  sed -i 's^  # Handle RTMPT (RTMP Tunneling).  Forwards requests^\n  # Netdata Monitoring\n  location /netdata/ {\n    auth_basic "BigBlueButton";\n    auth_basic_user_file /etc/nginx/.htpasswd;\n    proxy_pass         http://127.0.0.1:19999/;\n    proxy_redirect     default;\n    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;\n    client_max_body_size       10m;\n    client_body_buffer_size    128k;\n    proxy_connect_timeout      90;\n    proxy_send_timeout         90;\n    proxy_read_timeout         90;\n    proxy_buffer_size          4k;\n    proxy_buffers              4 32k;\n    proxy_busy_buffers_size    64k;\n    proxy_temp_file_write_size 64k;\n    include    fastcgi_params;\n  }\n\n  # Handle RTMPT (RTMP Tunneling).  Forwards requests^' /etc/nginx/sites-available/bigbluebutton
+
+  bash <(curl -Ss https://raw.githubusercontent.com/ktsaou/netdata/master/kickstart.sh) --dont-wait
+
+  sed -i '0,/# bind to = */s//bind to = 127.0.0.1/' /etc/netdata/netdata.conf
+  sed -i 's/bind to = 127.0.0.1[*]\+/bind to = 127.0.0.1/g' /etc/netdata/netdata.conf
+  cat /etc/netdata/netdata.conf | grep bind
+  cat /etc/nginx/sites-available/bigbluebutton
+  systemctl reload nginx
 }
 
 main "$@" || exit 1
