@@ -529,7 +529,7 @@ check_version() {
   echo "deb https://$PACKAGE_REPOSITORY/$VERSION bigbluebutton-$DISTRO main" > /etc/apt/sources.list.d/bigbluebutton.list
 }
 
-check_host() {}
+check_host() {
 #  if [ -z "$PROVIDED_CERTIFICATE" ]; then
 #    need_pkg dnsutils apt-transport-https net-tools
 #    DIG_IP=$(dig +short $1 | grep '^[.0-9]*$' | tail -n1)
@@ -537,7 +537,8 @@ check_host() {}
 #    get_IP $1
 #    if [ "$DIG_IP" != "$IP" ]; then err "DNS lookup for $1 resolved to $DIG_IP but didn't match local $IP."; fi
 #  fi
-
+  echo "check_host"
+}
 
 check_coturn() {
   if ! echo $1 | grep -q ':'; then err "Option for coturn must be <hostname>:<secret>"; fi
