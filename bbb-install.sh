@@ -26,22 +26,22 @@
 #
 #  Install BigBlueButton and configure using server's external IP address
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22
 #
 #
 #  Install BigBlueButton and configure using hostname bbb.example.com
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com
 #
 #
 #  Install BigBlueButton with a SSL certificate from Let's Encrypt using e-mail info@example.com:
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com
 #
 #
 #  Install BigBlueButton with SSL + Greenlight
 #
-#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-220 -s bbb.example.com -e info@example.com -g
+#    wget -qO- https://ubuntu.bigbluebutton.org/bbb-install.sh | bash -s -- -v xenial-22 -s bbb.example.com -e info@example.com -g
 #
 
 usage() {
@@ -57,7 +57,7 @@ USAGE:
 
 OPTIONS (install BigBlueButton):
 
-  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-220') (required)
+  -v <version>           Install given version of BigBlueButton (e.g. 'xenial-22') (required)
 
   -s <hostname>          Configure server with <hostname>
   -e <email>             Email for Let's Encrypt certbot
@@ -92,10 +92,10 @@ EXAMPLES:
 
 Sample options for setup a BigBlueButton server
 
-    -v xenial-220
-    -v xenial-220 -s bbb.example.com -e info@example.com
-    -v xenial-220 -s bbb.example.com -e info@example.com -g
-    -v xenial-220 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
+    -v xenial-22
+    -v xenial-22 -s bbb.example.com -e info@example.com
+    -v xenial-22 -s bbb.example.com -e info@example.com -g
+    -v xenial-22 -s bbb.example.com -e info@example.com -g -c turn.example.com:1234324
 
 Sample options for setup of a coturn server (on a different server)
 
@@ -392,8 +392,8 @@ HERE
   enable_external_client_logging
   mount_scaleway_s3
   install_prometheus
+  fix_frreeswitch_issue  
   bbb-conf --restart
-
   bbb-conf --check
 }
 
@@ -464,6 +464,7 @@ get_IP() {
     need_pkg netcat-openbsd
     nc -l -p 443 > /dev/null 2>&1 &
     nc_PID=$!
+    sleep 1
     
      # Check if we can reach the server through it's external IP address
      if nc -zvw3 $external_ip 443  > /dev/null 2>&1; then
@@ -517,7 +518,7 @@ check_version() {
   # Check if were upgrading from 2.0 (the ownership of /etc/bigbluebutton/nginx/web has changed from bbb-client to bbb-web)
   if [ -f /etc/apt/sources.list.d/bigbluebutton.list ]; then
     if grep -q xenial-200 /etc/apt/sources.list.d/bigbluebutton.list; then
-      if echo $VERSION | grep -q xenial-220; then
+      if echo $VERSION | grep -q xenial-22; then
         if dpkg -l | grep -q bbb-client; then
           apt-get purge -y bbb-client
         fi
@@ -556,7 +557,7 @@ check_coturn() {
 }
 
 check_apache2() {
-  if dpkg -l | grep -q apache2-bin; then err "You must unisntall the Apache2 server first"; fi
+  if dpkg -l | grep -q apache2-bin; then err "You must uninstall the Apache2 server first"; fi
 }
 
 # If running under LXC, then modify the FreeSWITCH systemctl service so it does not use realtime scheduler
@@ -628,7 +629,7 @@ WantedBy=multi-user.target
 HERE
 
       if [ "$DAEMON_RELOAD" == "true" ]; then
-        systemctl dameon-reload
+        systemctl daemon-reload
         systemctl restart dummy-nic
       else
         systemctl enable dummy-nic
@@ -641,7 +642,7 @@ HERE
 check_LimitNOFILE() {
   CPU=$(nproc --all)
 
-  if [ "$CPU" -gt 36 ]; then
+  if [ "$CPU" -gt 8 ]; then
     if [ -f /lib/systemd/system/bbb-web.service ]; then
       # Let's create an override file to increase the number of LimitNOFILE 
       mkdir -p /etc/systemd/system/bbb-web.service.d/
@@ -721,11 +722,13 @@ install_greenlight(){
 
   BIGBLUEBUTTON_URL=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}')/bigbluebutton/
   BIGBLUEBUTTON_SECRET=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties   | grep -v '#' | grep securitySalt | cut -d= -f2)
+  SAFE_HOSTS=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*=//;p}' | sed 's/https\?:\/\///')
 
   # Update Greenlight configuration file in ~/greenlight/env
   sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"                   ~/greenlight/.env
   sed -i "s|.*BIGBLUEBUTTON_ENDPOINT=.*|BIGBLUEBUTTON_ENDPOINT=$BIGBLUEBUTTON_URL|" ~/greenlight/.env
   sed -i "s|.*BIGBLUEBUTTON_SECRET=.*|BIGBLUEBUTTON_SECRET=$BIGBLUEBUTTON_SECRET|"  ~/greenlight/.env
+  sed -i "s|SAFE_HOSTS=.*|SAFE_HOSTS=$SAFE_HOSTS|"                                  ~/greenlight/.env
 
   # need_pkg bbb-webhooks
 
@@ -846,8 +849,8 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/$HOST/privkey.pem;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
-    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS:!AES256";
+    ssl_protocols TLSv1.2;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers on;
     ssl_dhparam /etc/nginx/ssl/dhp-4096.pem;
 
@@ -913,8 +916,7 @@ HERE
   # Configure rest of BigBlueButton Configuration for SSL
   sed -i "s/<param name=\"wss-binding\"  value=\"[^\"]*\"\/>/<param name=\"wss-binding\"  value=\"$IP:7443\"\/>/g" /opt/freeswitch/conf/sip_profiles/external.xml
 
-  sed -i 's/http:/https:/g' /etc/bigbluebutton/nginx/sip.nginx
-  sed -i 's/5066/7443/g'    /etc/bigbluebutton/nginx/sip.nginx
+  sed -i "s/proxy_pass .*/proxy_pass https:\/\/$IP:7443;/g" /etc/bigbluebutton/nginx/sip.nginx
 
   sed -i 's/bigbluebutton.web.serverURL=http:/bigbluebutton.web.serverURL=https:/g' $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
@@ -957,7 +959,12 @@ HERE
     else
       # 2.2
       yq w -i $TARGET kurento[0].ip "$IP"
-      yq w -i $TARGET freeswitch.sip_ip "$IP"
+      yq w -i $TARGET freeswitch.ip "$IP"
+      if [ ! -z "$INTERNAL_IP" ]; then
+        yq w -i $TARGET freeswitch.sip_ip "$INTERNAL_IP"
+      else
+        yq w -i $TARGET freeswitch.sip_ip "$IP"
+      fi
     fi
     chown bigbluebutton:bigbluebutton $TARGET
     chmod 644 $TARGET
@@ -1034,9 +1041,11 @@ install_coturn() {
   need_ppa certbot-ubuntu-certbot-bionic.list ppa:certbot/certbot 75BCA694 7BF5
   apt-get -y install certbot
 
-  certbot certonly --standalone --non-interactive --preferred-challenges http \
-    --deploy-hook "systemctl restart coturn" \
-    -d $COTURN_HOST --email $EMAIL --agree-tos -n
+  if ! certbot certonly --standalone --non-interactive --preferred-challenges http \
+         --deploy-hook "systemctl restart coturn" \
+         -d $COTURN_HOST --email $EMAIL --agree-tos -n ; then
+     err "Let's Encrypt SSL request for $COTURN_HOST did not succeed - exiting"
+  fi
 
   COTURN_REALM=$(echo $COTURN_HOST | cut -d'.' -f2-)
 
@@ -1195,7 +1204,7 @@ install_prometheus() {
   apt install -y wget apache2-utils
   htpasswd -b -c /etc/nginx/.htpasswd $NGINX_AUTH_USER $NGINX_AUTH_PASS
   rm ~/bbb-exporter/docker-compose.yml
-  wget https://raw.githubusercontent.com/greenstatic/bigbluebutton-exporter/master/extras/docker-compose.yml --directory-prefix=~/bbb-exporter/
+  wget -O /home/$USER/bbb-exporter/docker-compose.yaml https://raw.githubusercontent.com/greenstatic/bigbluebutton-exporter/master/extras/docker-compose.exporter.yaml
 
   BBB_URL=`bbb-conf --secret | sed -n 's/    URL: //p'`
   BBB_SECRET=`bbb-conf --secret | sed -n 's/    Secret: //p'`
@@ -1212,13 +1221,24 @@ HERE
 
   sed -i 's^  # Handle RTMPT (RTMP Tunneling).  Forwards requests^\n  # Netdata Monitoring\n  location /netdata/ {\n    auth_basic "BigBlueButton";\n    auth_basic_user_file /etc/nginx/.htpasswd;\n    proxy_pass         http://127.0.0.1:19999/;\n    proxy_redirect     default;\n    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;\n    client_max_body_size       10m;\n    client_body_buffer_size    128k;\n    proxy_connect_timeout      90;\n    proxy_send_timeout         90;\n    proxy_read_timeout         90;\n    proxy_buffer_size          4k;\n    proxy_buffers              4 32k;\n    proxy_busy_buffers_size    64k;\n    proxy_temp_file_write_size 64k;\n    include    fastcgi_params;\n  }\n\n  # Handle RTMPT (RTMP Tunneling).  Forwards requests^' /etc/nginx/sites-available/bigbluebutton
 
-  bash <(curl -Ss https://raw.githubusercontent.com/ktsaou/netdata/master/kickstart.sh) --dont-wait
+  bash <(curl -Ss https://my-netdata.io/kickstart.sh) --dont-wait
 
   sed -i '0,/# bind to = */s//bind to = 127.0.0.1/' /etc/netdata/netdata.conf
   sed -i 's/bind to = 127.0.0.1[*]\+/bind to = 127.0.0.1/g' /etc/netdata/netdata.conf
   cat /etc/netdata/netdata.conf | grep bind
   cat /etc/nginx/sites-available/bigbluebutton
   systemctl reload nginx
+}
+
+fix_frreeswitch_issue() {
+  #As suggested by Vishnu N (https://groups.google.com/d/msg/bigbluebutton-setup/F2MlW6Voj-0/ZXDq5_-uEQAJ) I was able to solve the WebRTC 1004 issue as follows:
+
+  sed -i 's^    <param name="apply-candidate-acl" value="any_v4.auto"/>^    <param name="apply-candidate-acl" value="any_v4.auto"/>\n    <param name="apply-candidate-acl" value="ipv4"/>^' /opt/freeswitch/etc/freeswitch/sip_profiles/internal.xml
+  sed -i 's^    <param name="apply-candidate-acl" value="any_v4.auto"/>^    <param name="apply-candidate-acl" value="any_v4.auto"/>\n    <param name="apply-candidate-acl" value="ipv4"/>^' /opt/freeswitch/etc/freeswitch/sip_profiles/external.xml
+
+  sed -i 's^    <list name="lan" default="allow">^    <list name="ipv4" default="deny">\n        <node type="allow" cidr="0.0.0.0/0"/>\n    </list>\n    \n    <list name="lan" default="allow">^' /opt/freeswitch/etc/freeswitch/autoload_configs/acl.conf.xml
+
+  bbb-conf --clean
 }
 
 main "$@" || exit 1
