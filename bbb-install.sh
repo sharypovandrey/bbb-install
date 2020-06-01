@@ -392,7 +392,11 @@ HERE
   enable_external_client_logging
   mount_scaleway_s3
   install_prometheus
-  fix_frreeswitch_issue  
+  fix_frreeswitch_issue
+  set_webcam_bitrate
+  set_audio_bitate
+  set_ufw
+
   bbb-conf --restart
   bbb-conf --check
 }
@@ -1196,8 +1200,11 @@ change_title_and_welcome() {
   sed -i 's^    clientTitle:.*^    clientTitle: "Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
   sed -i 's^    appName:.*^    appName: "Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
   sed -i 's^    copyright:.*^    copyright: "©2019 Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
-  sed -i "s^defaultWelcomeMessage=.*^defaultWelcomeMessage=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
+  # translate to utf-8 https://native2ascii.net/
+  sed -i "s^defaultWelcomeMessage=.*^defaultWelcomeMessage=\u041e\u043d\u043b\u0430\u0439\u043d \u0413\u0438\u043c\u043d\u0430\u0437\u0438\u044f \u21161^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   sed -i "s^defaultWelcomeMessageFooter=.*^defaultWelcomeMessageFooter=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
+  sed -i "s^allowModsToUnmuteUsers=false^allowModsToUnmuteUsers=true^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
+  sed -i "s^minBrowserVersions:^minBrowserVersions:\n  - browser: YandexBrowser\n    version: 15^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
 }
 
 install_prometheus() {
@@ -1240,6 +1247,25 @@ fix_frreeswitch_issue() {
   sed -i 's^    <list name="lan" default="allow">^    <list name="ipv4" default="deny">\n        <node type="allow" cidr="0.0.0.0/0"/>\n    </list>\n    \n    <list name="lan" default="allow">^' /opt/freeswitch/etc/freeswitch/autoload_configs/acl.conf.xml
 
   bbb-conf --clean
+}
+
+set_webcam_bitrate() {
+  sed -i s'^      bitrate: 100^      bitrate: 50^' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i s'^      bitrate: 200^      bitrate: 100^' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i s'^      bitrate: 500^      bitrate: 100^' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+  sed -i s'^      bitrate: 800^      bitrate: 100^' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+}
+
+set_audio_bitate() {
+  sed -i s'^        <param name="advertise-useinbandfec" value="1"/>^        <param name="advertise-useinbandfec" value="1"/>\n        <param name="maxaveragebitrate" value="12000"/>^' /opt/freeswitch/conf/autoload_configs/opus.conf.xml
+}
+
+set_ufw() {
+  apt-get install -y ufw
+  ufw allow OpenSSH
+  ufw allow "Nginx Full"
+  ufw allow 16384:32768/udp
+  ufw --force enable
 }
 
 main "$@" || exit 1
