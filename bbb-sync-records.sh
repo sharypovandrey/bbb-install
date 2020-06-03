@@ -5,7 +5,7 @@
 #apt -y install awscli
 
 apt remove awscli
-apt install python-pip
+apt install -y python-pip
 pip install awscli
 /usr/local/bin/aws configure set aws_access_key_id AWS_KEY
 /usr/local/bin/aws configure set aws_secret_access_key AWS_SECRET
