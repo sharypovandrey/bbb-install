@@ -392,7 +392,7 @@ HERE
   enable_external_client_logging
   mount_scaleway_s3
   install_prometheus
-  fix_frreeswitch_issue
+  #fix_frreeswitch_issue
   set_webcam_bitrate
   set_audio_bitate
   set_ufw
