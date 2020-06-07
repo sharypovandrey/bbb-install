@@ -390,8 +390,8 @@ HERE
   replace_static
   change_title_and_welcome
   enable_external_client_logging
-  mount_scaleway_s3
-  install_prometheus
+  #mount_scaleway_s3
+  #install_prometheus
   #fix_frreeswitch_issue
   set_webcam_bitrate
   set_audio_bitate
@@ -1201,7 +1201,7 @@ change_title_and_welcome() {
   sed -i 's^    appName:.*^    appName: "Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
   sed -i 's^    copyright:.*^    copyright: "©2019 Онлайн Гимназия №1"^g' /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
   # translate to utf-8 https://native2ascii.net/
-  sed -i "s^defaultWelcomeMessage=.*^defaultWelcomeMessage=\u041e\u043d\u043b\u0430\u0439\u043d \u0413\u0438\u043c\u043d\u0430\u0437\u0438\u044f \u21161^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
+  sed -i "s^defaultWelcomeMessage=.*^defaultWelcomeMessage=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   sed -i "s^defaultWelcomeMessageFooter=.*^defaultWelcomeMessageFooter=^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   sed -i "s^allowModsToUnmuteUsers=false^allowModsToUnmuteUsers=true^g" /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
   sed -i "s^minBrowserVersions:^minBrowserVersions:\n  - browser: YandexBrowser\n    version: 15^g" /usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
